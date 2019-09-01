@@ -40,6 +40,6 @@ enum OPCODES
     ADD_IX  = 0xF01E,   // Set I = I + Vx
     LD_FX   = 0xF029,   // Set I = location of sprite for digit Vx
     LD_BX   = 0xF033,   // Store BCD represenstation of Vx in I, I+1, and I+2
-    LD_IV0  = 0xF055,   // Store registers V0-Vx in memory starting at I
-    LD_V0I  = 0xF065,   // Read V0-Vx from memory starting at I
+    LD_IV   = 0xF055,   // Store registers V0-Vx in memory starting at I
+    LD_VI   = 0xF065,   // Read V0-Vx from memory starting at I
 };

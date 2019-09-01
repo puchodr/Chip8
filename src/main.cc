@@ -1,4 +1,6 @@
 #include <string.h>
+#include <time.h>
+
 #include <iostream>
 #include <fstream>
 
@@ -20,6 +22,8 @@ uint8_t sound_timer;
 uint16_t PC;
 uint8_t SP;
 uint16_t stack[16];
+bool key[16]; // Pressed = true
+bool wait;
 
 void init_registers();
 void dump_registers();
@@ -27,6 +31,7 @@ void init_memory(const char *file_path);
 
 int main (int argc, char **argv)
 {
+    srand (time(0));
     // @Todo: check argc and argv for the path to the rom to load
     init_memory("roms/test_opcode.ch8");
 
@@ -35,8 +40,12 @@ int main (int argc, char **argv)
 
     for(;;)
     {
-        opcode = (memory[PC++] << 8);
-        opcode |= memory[PC++];
+        // @Todo: Uncomment this whenever you implement the keyboard for LD_XK
+        //if (!wait)
+        //{
+            opcode = (memory[PC++] << 8);
+            opcode |= memory[PC++];
+        //}
 
         switch(opcode & 0xF000)
         {
@@ -47,6 +56,7 @@ int main (int argc, char **argv)
                         std::cout << "CLS: " << opcode << std::endl;
 
                         // @Todo: Clear the graphics screen
+                        dump_registers();
                         break;
 
                     case RET:
@@ -55,7 +65,9 @@ int main (int argc, char **argv)
                         dump_registers();
                         break;
 
-                    default: // Assuming SYS, we're ignoring this
+                    default:
+                        std::cout << "Assuming SYS, we're ignoring opcode: " << opcode << std::endl;
+                        dump_registers();
                         break;
                 }
                 break;
@@ -78,30 +90,21 @@ int main (int argc, char **argv)
             case SE_X:
                 std::cout << "SE_X: " << (unsigned)V[Vx] << " == " << (opcode & 0x00FF) << std::endl;
 
-                if (V[Vx] == (opcode & 0x00FF))
-                {
-                    PC += 2;
-                }
+                PC += (V[Vx] == (opcode & 0x00FF)) ? 2 : 0;
                 dump_registers();
                 break;
 
             case SNE_X:
                 std::cout << "SNE_X: " << (unsigned)V[Vx] << " != " << (opcode & 0x00FF) << std::endl;
 
-                if (V[Vx] != (opcode & 0x00FF))
-                {
-                    PC += 2;
-                }
+                PC += (V[Vx] != (opcode & 0x00FF)) ? 2 : 0;
                 dump_registers();
                 break;
 
             case SE_XY:
                 std::cout << "SE_XY: " << (unsigned)V[Vx] << " == " << (unsigned)V[Vy] << std::endl;
 
-                if (V[Vx] == V[Vy])
-                {
-                    PC += 2;
-                }
+                PC += (V[Vx] == V[Vy]) ? 2 : 0;
                 dump_registers();
                 break;
 
@@ -192,38 +195,70 @@ int main (int argc, char **argv)
                         V[Vx] <<= 1;
                         dump_registers();
                         break;
+
+                    default:
+                        std::cout << "Don't know how to decode MASK_8 opcode: " << opcode << std::endl;
+                        dump_registers();
+                        break;
                 }
                 break;
 
             case SNE_XY:
-                std::cout << "SNE_XY: " << opcode << std::endl;
+                std::cout << "SNE_XY: " << (unsigned)V[Vx] << " != " << (unsigned)V[Vy] << std::endl;
+
+                PC += (V[Vx] != V[Vy]) ? 2 : 0;
+                dump_registers();
                 break;
 
             case LD_I:
-                std::cout << "LD_I: " << opcode << std::endl;
+                std::cout << "LD_I: I" << " = " << (opcode & 0x0FFF) << std::endl;
+
+                I = (opcode & 0x0FFF);
+                dump_registers();
                 break;
 
             case JP_V0:
-                std::cout << "JP_V0: " << opcode << std::endl;
+                std::cout << "JP_V0: PC = " << V[0] << " + " << (opcode & 0x0FFF) << std::endl;
+
+                PC = V[0] + opcode & 0x0FFF;
+                dump_registers();
                 break;
 
             case RND_X:
-                std::cout << "RND_X: " << opcode << std::endl;
+                V[Vx] = rand() & 0xFF;
+                std::cout << "RND_X: V" << Vx << " = " << V[Vx] << " & " << (opcode & 0x00FF) << std::endl;
+
+                V[Vx] &= (opcode & 0x00FF);
+                dump_registers();
                 break;
 
             case DRW_XY:
                 std::cout << "DRW_XY: " << opcode << std::endl;
+
+                // @Todo: Figure out drawing to the screen.
+                dump_registers();
                 break;
 
             case MASK_E:
                 switch (opcode & 0xF0FF)
                 {
                     case SKP_X:
-                        std::cout << "SKP_X: " << opcode << std::endl;
+                        std::cout << "SKP_X: " << (int)key[Vx] << " == 1" << std::endl;
+
+                        PC += key[Vx] ? 2 : 0;
+                        dump_registers();
                         break;
 
                     case SKNP_X:
-                        std::cout << "SKNP_X: " << opcode << std::endl;
+                        std::cout << "SKNP_X: " << (int)key[Vx] << " == 0" << std::endl;
+
+                        PC += key[Vx] ? 0 : 2;
+                        dump_registers();
+                        break;
+
+                    default:
+                        std::cout << "Don't know how to decode MASK_E opcode: " << opcode << std::endl;
+                        dump_registers();
                         break;
                 }
                 break;
@@ -232,45 +267,89 @@ int main (int argc, char **argv)
                 switch (opcode & 0xF0FF)
                 {
                     case LD_XDT:
-                        std::cout << "LD_XDT: " << opcode << std::endl;
+                        std::cout << "LD_XDT: V" << Vx << " = " << (unsigned)delay_timer << std::endl;
+
+                        V[Vx] = delay_timer;
+                        dump_registers();
                         break;
 
                     case LD_XK:
                         std::cout << "LD_XK: " << opcode << std::endl;
+
+                        // @Todo: Pause execution until a key is pressed
+                        wait = true;
+                        dump_registers();
                         break;
 
                     case LD_DTX:
-                        std::cout << "LD_DTX: " << opcode << std::endl;
+                        std::cout << "LD_DTX: DT = " << (unsigned)V[Vx] << std::endl;
+
+                        delay_timer = V[Vx];
+                        dump_registers();
                         break;
 
                     case LD_STX:
-                        std::cout << "LD_STX: " << opcode << std::endl;
+                        std::cout << "LD_STX: ST = " << (unsigned)V[Vx] << std::endl;
+
+                        sound_timer = V[Vx];
+                        dump_registers();
                         break;
 
                     case ADD_IX:
-                        std::cout << "ADD_IX: " << opcode << std::endl;
+                        std::cout << "ADD_IX: I" << " = " << I << " + " << V[Vx] << std::endl;
+
+                        I += V[Vx];
+                        dump_registers();
                         break;
 
                     case LD_FX:
                         std::cout << "LD_FX: " << opcode << std::endl;
+                        // @Todo: Come back to this when you figure out the graphics
+                        dump_registers();
                         break;
 
                     case LD_BX:
-                        std::cout << "LD_BX: " << opcode << std::endl;
+                        std::cout << "LD_BX: memory at I = " << V[Vx] << std::endl;
+                        std::cout << "  memory[I] = " << V[Vx] / 100 << std::endl;
+                        std::cout << "  memory[I+1] = " << (V[Vx] % 100) / 10 << std::endl;
+                        std::cout << "  memory[I+2] = " << V[Vx] % 10 << std::endl;
+
+                        memory[I] = V[Vx] / 100;
+                        memory[I+1] = (V[Vx] % 100) / 10;
+                        memory[I+2] = V[Vx] % 10;
+                        dump_registers();
                         break;
 
-                    case LD_IV0:
-                        std::cout << "LD_IV0: " << opcode << std::endl;
+                    case LD_IV:
+                        std::cout << "LD_IV: Storing V0-V" << Vx << " in memory starting at I" << opcode << std::endl;
+
+                        for (int i=0; i<Vx; ++i)
+                        {
+                            memory[I+i] = V[i];
+                        }
+                        dump_registers();
                         break;
 
-                    case LD_V0I:
-                        std::cout << "LD_V0I: " << opcode << std::endl;
+                    case LD_VI:
+                        std::cout << "LD_VI: Storing I-I+" << Vx << " into V0-V" << Vx << std::endl;
+
+                        for (int i=0; i<Vx; ++i)
+                        {
+                            V[i] = memory[I+i];
+                        }
+                        dump_registers();
+                        break;
+
+                    default:
+                        std::cout << "Don't know how to decode MASK_F opcode: " << opcode << std::endl;
+                        dump_registers();
                         break;
                 }
                 break;
 
             default:
-                std::cout << "We've encountered an opcode that we don't know about " << opcode << std::endl;
+                std::cout << "Don't know how to decode opcode: " << opcode << std::endl;
+                dump_registers();
                 break;
         }
 
@@ -290,6 +369,9 @@ void init_registers()
     PC = InitialPC;
     SP = 0;
     memset (stack, 0, 16 * sizeof(uint16_t));
+    memset (key, false, 16 * sizeof(bool));
+
+    wait = false;
 }
 
 void dump_registers()
@@ -313,6 +395,8 @@ void dump_registers()
     {
         std::cout << "    S" << (int)i << ": " << (unsigned)stack[i] << std::endl;
     }
+
+    std::cout << std::endl;
 }
 
 void init_memory(const char *file_path)
