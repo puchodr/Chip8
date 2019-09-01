@@ -38,8 +38,166 @@ int main (int argc, char **argv)
         switch(opcode & 0xF000)
         {
             case MASK_0:
+                switch (opcode & 0xF0FF)
+                {
+                    case CLS:
+                        std::cout << "CLS: " << opcode << std::endl;
+                        break;
+
+                    case RET:
+                        std::cout << "RET: " << opcode << std::endl;
+                        break;
+
+                    default: // Assuming SYS, we're ignoring this
+                        break;
+                }
+                break;
+
+            case JP:
+                std::cout << "JP: " << opcode << std::endl;
+                break;
+
+            case CALL:
+                std::cout << "CALL: " << opcode << std::endl;
+                break;
+
+            case SE_X:
+                std::cout << "SE_X: " << opcode << std::endl;
+                break;
+
+            case SNE_X:
+                std::cout << "SNE_X: " << opcode << std::endl;
+                break;
+
+            case SE_XY:
+                std::cout << "SE_XY: " << opcode << std::endl;
+                break;
+
+            case LD_X:
+                std::cout << "LD_X: " << opcode << std::endl;
+                break;
+
+            case ADD_X:
+                std::cout << "ADD_X: " << opcode << std::endl;
+                break;
+
+            case MASK_8:
+                switch (opcode & 0xF00F)
+                {
+                    case LD_XY:
+                        std::cout << "LD_XY: " << opcode << std::endl;
+                        break;
+
+                    case OR_XY:
+                        std::cout << "OR_XY: " << opcode << std::endl;
+                        break;
+
+                    case AND_XY:
+                        std::cout << "AND_XY: " << opcode << std::endl;
+                        break;
+
+                    case XOR_XY:
+                        std::cout << "XOR_XY: " << opcode << std::endl;
+                        break;
+
+                    case ADD_XY:
+                        std::cout << "ADD_XY: " << opcode << std::endl;
+                        break;
+
+                    case SUB_XY:
+                        std::cout << "SUB_XY: " << opcode << std::endl;
+                        break;
+
+                    case SHR_X:
+                        std::cout << "SHR_X: " << opcode << std::endl;
+                        break;
+
+                    case SUBN_XY:
+                        std::cout << "SUBN_XY: " << opcode << std::endl;
+                        break;
+
+                    case SHL_X:
+                        std::cout << "SHL_X: " << opcode << std::endl;
+                        break;
+                }
+                break;
+
+            case SNE_XY:
+                std::cout << "SNE_XY: " << opcode << std::endl;
+                break;
+
+            case LD_I:
+                std::cout << "LD_I: " << opcode << std::endl;
+                break;
+
+            case JP_V0:
+                std::cout << "JP_V0: " << opcode << std::endl;
+                break;
+
+            case RND_X:
+                std::cout << "RND_X: " << opcode << std::endl;
+                break;
+
+            case DRW_XY:
+                std::cout << "DRW_XY: " << opcode << std::endl;
+                break;
+
+            case MASK_E:
+                switch (opcode & 0xF0FF)
+                {
+                    case SKP_X:
+                        std::cout << "SKP_X: " << opcode << std::endl;
+                        break;
+
+                    case SKNP_X:
+                        std::cout << "SKNP_X: " << opcode << std::endl;
+                        break;
+                }
+                break;
+
+            case MASK_F:
+                switch (opcode & 0xF0FF)
+                {
+                    case LD_XDT:
+                        std::cout << "LD_XDT: " << opcode << std::endl;
+                        break;
+
+                    case LD_XK:
+                        std::cout << "LD_XK: " << opcode << std::endl;
+                        break;
+
+                    case LD_DTX:
+                        std::cout << "LD_DTX: " << opcode << std::endl;
+                        break;
+
+                    case LD_STX:
+                        std::cout << "LD_STX: " << opcode << std::endl;
+                        break;
+
+                    case ADD_IX:
+                        std::cout << "ADD_IX: " << opcode << std::endl;
+                        break;
+
+                    case LD_FX:
+                        std::cout << "LD_FX: " << opcode << std::endl;
+                        break;
+
+                    case LD_BX:
+                        std::cout << "LD_BX: " << opcode << std::endl;
+                        break;
+
+                    case LD_IV0:
+                        std::cout << "LD_IV0: " << opcode << std::endl;
+                        break;
+
+                    case LD_V0I:
+                        std::cout << "LD_V0I: " << opcode << std::endl;
+                        break;
+                }
+                break;
 
             default:
+                std::cout << "We've encountered an opcode that we don't know about " << opcode << std::endl;
                 break;
         }
     }

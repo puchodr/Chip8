@@ -13,7 +13,7 @@ enum OPCODES
     JP      = 0x1000,   // Jump to location addr
     CALL    = 0x2000,   // Call subroutine at addr
     SE_X    = 0x3000,   // Skip next instruction if Vx = kk
-    SNE     = 0x4000,   // Skip next instruction if Vx != kk
+    SNE_X   = 0x4000,   // Skip next instruction if Vx != kk
     SE_XY   = 0x5000,   // Skip next instruction if Vx = Vy
     LD_X    = 0x6000,   // Set Vx = kk
     ADD_X   = 0x7000,   // Set Vx = Vx + kk
