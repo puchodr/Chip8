@@ -11,9 +11,8 @@ uint16_t InitialPC = 0x200;
 char memory[4096];
 
 // Registers
-int8_t V[16];
-int16_t I;
-uint8_t VF;
+uint8_t V[16];
+uint16_t I;
 uint8_t delay_timer;
 uint8_t sound_timer;
 
@@ -77,7 +76,7 @@ int main (int argc, char **argv)
                 break;
 
             case SE_X:
-                std::cout << "SE_X: " << (int)V[Vx] << " == " << (opcode & 0x00FF) << std::endl;
+                std::cout << "SE_X: " << (unsigned)V[Vx] << " == " << (opcode & 0x00FF) << std::endl;
 
                 if (V[Vx] == (opcode & 0x00FF))
                 {
@@ -87,7 +86,7 @@ int main (int argc, char **argv)
                 break;
 
             case SNE_X:
-                std::cout << "SNE_X: " << (int)V[Vx] << " != " << (opcode & 0x00FF) << std::endl;
+                std::cout << "SNE_X: " << (unsigned)V[Vx] << " != " << (opcode & 0x00FF) << std::endl;
 
                 if (V[Vx] != (opcode & 0x00FF))
                 {
@@ -97,7 +96,7 @@ int main (int argc, char **argv)
                 break;
 
             case SE_XY:
-                std::cout << "SE_XY: " << (int)V[Vx] << " == " << (int)V[Vy] << std::endl;
+                std::cout << "SE_XY: " << (unsigned)V[Vx] << " == " << (unsigned)V[Vy] << std::endl;
 
                 if (V[Vx] == V[Vy])
                 {
@@ -124,39 +123,74 @@ int main (int argc, char **argv)
                 switch (opcode & 0xF00F)
                 {
                     case LD_XY:
-                        std::cout << "LD_XY: " << opcode << std::endl;
+                        std::cout << "LD_XY: V" << Vx << " = " << (unsigned)V[Vy] << std::endl;
+
+                        V[Vx] = V[Vy];
+                        dump_registers();
                         break;
 
                     case OR_XY:
-                        std::cout << "OR_XY: " << opcode << std::endl;
+                        std::cout << "OR_XY: V" << Vx << " = " << V[Vx] << " | " << V[Vy] << opcode << std::endl;
+
+                        V[Vx] |= V[Vy];
+                        dump_registers();
                         break;
 
                     case AND_XY:
-                        std::cout << "AND_XY: " << opcode << std::endl;
+                        std::cout << "AND_XY: V" << Vx << " = " << V[Vx] << " & " << V[Vy] << opcode << std::endl;
+
+                        V[Vx] &= V[Vy];
+                        dump_registers();
                         break;
 
                     case XOR_XY:
-                        std::cout << "XOR_XY: " << opcode << std::endl;
+                        std::cout << "XOR_XY: V" << Vx << " = " << V[Vx] << " ^ " << V[Vy] << opcode << std::endl;
+
+                        V[Vx] ^= V[Vy];
+                        dump_registers();
                         break;
 
                     case ADD_XY:
-                        std::cout << "ADD_XY: " << opcode << std::endl;
+                        std::cout << "ADD_XY: V" << Vx << " = " << V[Vx] << " + " << V[Vy] << std::endl;
+                        V[0xF] = ((V[Vx] + V[Vy]) > 255) ? 1 : 0;
+
+                        V[Vx] += V[Vy];
+                        dump_registers();
                         break;
 
                     case SUB_XY:
-                        std::cout << "SUB_XY: " << opcode << std::endl;
+                        std::cout << "SUB_XY: V" << Vx << " = " << V[Vx] << " - " << V[Vy] << std::endl;
+                        V[0xF] = (V[Vx] > V[Vy]) ? 1 : 0;
+
+                        V[Vx] -= V[Vy];
+                        dump_registers();
                         break;
 
                     case SHR_X:
-                        std::cout << "SHR_X: " << opcode << std::endl;
+                        // @Todo: Figure out what Vy is used for
+                        std::cout << "SHR_X: V" << Vx << " = " << V[Vx] << " >> 1 " << std::endl;
+                        //V[0xF] = V[Vx] % 2;
+                        V[0xF] = (V[Vx] & 0x1);
+
+                        V[Vx] >>= 1;
+                        dump_registers();
                         break;
 
                     case SUBN_XY:
-                        std::cout << "SUBN_XY: " << opcode << std::endl;
+                        std::cout << "SUBN_XY: V" << Vx << " = " << V[Vy] << " - " << V[Vx] << std::endl;
+                        V[0xF] = (V[Vy] > V[Vx]) ? 1 : 0;
+
+                        V[Vx] = V[Vy] - V[Vx];
+                        dump_registers();
                         break;
 
                     case SHL_X:
-                        std::cout << "SHL_X: " << opcode << std::endl;
+                        // @Todo: Figure out what Vy is used for
+                        std::cout << "SHL_X: V" << Vx << " = " << V[Vx] << " << 1 " << std::endl;
+                        V[0xF] = (V[Vx] & 0x80) >> 4;
+
+                        V[Vx] <<= 1;
+                        dump_registers();
                         break;
                 }
                 break;
@@ -248,9 +282,8 @@ int main (int argc, char **argv)
 
 void init_registers()
 {
-    memset (V, 0, 16 * sizeof(int8_t));
+    memset (V, 0, 16 * sizeof(uint8_t));
     I = 0;
-    VF = 0;
     delay_timer = 0;
     sound_timer = 0;
 
@@ -264,11 +297,10 @@ void dump_registers()
     std::cout << "  Vx:" << std::endl;
     for (int i=0; i<16; ++i)
     {
-        std::cout << "    V" << (int)i << ": " << (int)V[i] << std::endl;
+        std::cout << "    V" << (int)i << ": " << (unsigned)V[i] << std::endl;
     }
 
-    std::cout << "  I: " << (int)I << std::endl;
-    std::cout << "  VF: " << (unsigned)VF << std::endl;
+    std::cout << "  I: " << (unsigned)I << std::endl;
     std::cout << "  Delay Timer: " << (unsigned)delay_timer << std::endl;
     std::cout << "  Sound Timer: " << (unsigned)sound_timer << std::endl;
 
