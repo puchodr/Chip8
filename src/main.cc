@@ -4,6 +4,9 @@
 
 #include "opcodes.h"
 
+#define Vx ((opcode & 0x0F00) >> 8)
+#define Vy ((opcode & 0x00F0) >> 4)
+
 uint16_t InitialPC = 0x200;
 char memory[4096];
 
@@ -20,6 +23,7 @@ uint8_t SP;
 uint16_t stack[16];
 
 void init_registers();
+void dump_registers();
 void init_memory(const char *file_path);
 
 int main (int argc, char **argv)
@@ -42,10 +46,14 @@ int main (int argc, char **argv)
                 {
                     case CLS:
                         std::cout << "CLS: " << opcode << std::endl;
+
+                        // @Todo: Clear the graphics screen
                         break;
 
                     case RET:
                         std::cout << "RET: " << opcode << std::endl;
+                        PC = stack[--SP];
+                        dump_registers();
                         break;
 
                     default: // Assuming SYS, we're ignoring this
@@ -54,31 +62,62 @@ int main (int argc, char **argv)
                 break;
 
             case JP:
-                std::cout << "JP: " << opcode << std::endl;
+                std::cout << "JP: PC = " << (opcode & 0x0FFF) << std::endl;
+
+                PC = opcode & 0x0FFF;
+                dump_registers();
                 break;
 
             case CALL:
-                std::cout << "CALL: " << opcode << std::endl;
+                std::cout << "CALL: PC = " << (opcode & 0x0FFF) << std::endl;
+
+                stack[SP++] = PC;
+                PC = opcode & 0x0FFF;
+                dump_registers();
                 break;
 
             case SE_X:
-                std::cout << "SE_X: " << opcode << std::endl;
+                std::cout << "SE_X: " << (int)V[Vx] << " == " << (opcode & 0x00FF) << std::endl;
+
+                if (V[Vx] == (opcode & 0x00FF))
+                {
+                    PC += 2;
+                }
+                dump_registers();
                 break;
 
             case SNE_X:
-                std::cout << "SNE_X: " << opcode << std::endl;
+                std::cout << "SNE_X: " << (int)V[Vx] << " != " << (opcode & 0x00FF) << std::endl;
+
+                if (V[Vx] != (opcode & 0x00FF))
+                {
+                    PC += 2;
+                }
+                dump_registers();
                 break;
 
             case SE_XY:
-                std::cout << "SE_XY: " << opcode << std::endl;
+                std::cout << "SE_XY: " << (int)V[Vx] << " == " << (int)V[Vy] << std::endl;
+
+                if (V[Vx] == V[Vy])
+                {
+                    PC += 2;
+                }
+                dump_registers();
                 break;
 
             case LD_X:
-                std::cout << "LD_X: " << opcode << std::endl;
+                std::cout << "LD_X: V" << Vx << " = " << (opcode & 0x00FF) << std::endl;
+
+                V[Vx] = (opcode & 0x00FF);
+                dump_registers();
                 break;
 
             case ADD_X:
-                std::cout << "ADD_X: " << opcode << std::endl;
+                std::cout << "ADD_X: V" <<Vx << " = " << V[Vx] << " + " << (opcode & 0x00FF) << std::endl;
+
+                V[Vx] += (opcode & 0x00FF);
+                dump_registers();
                 break;
 
             case MASK_8:
@@ -200,6 +239,8 @@ int main (int argc, char **argv)
                 std::cout << "We've encountered an opcode that we don't know about " << opcode << std::endl;
                 break;
         }
+
+        //dump_registers();
     }
 
     return 0;
@@ -216,6 +257,30 @@ void init_registers()
     PC = InitialPC;
     SP = 0;
     memset (stack, 0, 16 * sizeof(uint16_t));
+}
+
+void dump_registers()
+{
+    std::cout << "  Vx:" << std::endl;
+    for (int i=0; i<16; ++i)
+    {
+        std::cout << "    V" << (int)i << ": " << (int)V[i] << std::endl;
+    }
+
+    std::cout << "  I: " << (int)I << std::endl;
+    std::cout << "  VF: " << (unsigned)VF << std::endl;
+    std::cout << "  Delay Timer: " << (unsigned)delay_timer << std::endl;
+    std::cout << "  Sound Timer: " << (unsigned)sound_timer << std::endl;
+
+    // Pseudo-Registers
+    std::cout << "  PC: " << (unsigned)PC << std::endl;
+    std::cout << "  SP: " << (unsigned)SP << std::endl;
+
+    std::cout << "  Stack:" << std::endl;
+    for (int i=0; i<16; ++i)
+    {
+        std::cout << "    S" << (int)i << ": " << (unsigned)stack[i] << std::endl;
+    }
 }
 
 void init_memory(const char *file_path)
