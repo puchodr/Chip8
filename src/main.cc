@@ -4,6 +4,8 @@
 #include <iostream>
 #include <fstream>
 
+#include <SDL/SDL.h>
+
 #include "opcodes.h"
 
 #define Vx ((opcode & 0x0F00) >> 8)
@@ -15,8 +17,10 @@ unsigned char memory[4096];
 // Registers
 uint8_t V[16];
 uint16_t I;
-uint8_t delay_timer;
-uint8_t sound_timer;
+uint8_t DT;
+uint32_t delay_time;
+uint8_t ST;
+uint8_t sound_time;
 
 // Pseudo-Registers
 uint16_t PC;
@@ -31,7 +35,9 @@ void init_memory(const char *file_path);
 
 int main (int argc, char **argv)
 {
-    srand (time(0));
+    srand (static_cast<unsigned int>(time(NULL)));
+    SDL_Init(SDL_INIT_EVERYTHING & SDL_INIT_NOPARACHUTE);
+
     // @Todo: check argc and argv for the path to the rom to load
     init_memory("roms/test_opcode.ch8");
 
@@ -292,9 +298,9 @@ int main (int argc, char **argv)
                 {
                     case LD_XDT:
                         std::cout << "LD_XDT: " << std::hex << opcode << std::dec << std::endl;
-                        std::cout << "  V" << (unsigned) Vx << " = " << (unsigned)delay_timer << std::endl;
+                        std::cout << "  V" << (unsigned) Vx << " = " << (unsigned)DT << std::endl;
 
-                        V[Vx] = delay_timer;
+                        V[Vx] = DT;
                         dump_registers();
                         break;
 
@@ -311,7 +317,8 @@ int main (int argc, char **argv)
                         std::cout << "LD_DTX: " << std::hex << opcode << std::dec << std::endl;
                         std::cout << "  DT = " << (unsigned)V[Vx] << std::endl;
 
-                        delay_timer = V[Vx];
+                        DT = V[Vx];
+                        delay_time = SDL_GetTicks();
                         dump_registers();
                         break;
 
@@ -319,7 +326,8 @@ int main (int argc, char **argv)
                         std::cout << "LD_STX: " << std::hex << opcode << std::dec << std::endl;
                         std::cout << "  ST = " << (unsigned)V[Vx] << std::endl;
 
-                        sound_timer = V[Vx];
+                        ST = V[Vx];
+                        sound_time = SDL_GetTicks();
                         dump_registers();
                         break;
 
@@ -386,7 +394,27 @@ int main (int argc, char **argv)
                 break;
         }
 
-        //dump_registers();
+        if (DT)
+        {
+            uint32_t elapsed_time = SDL_GetTicks() - delay_time;
+
+            if (elapsed_time >= (1000/60))
+            {
+                DT--;
+                delay_time = SDL_GetTicks();
+            }
+        }
+
+        if (ST)
+        {
+            uint32_t elapsed_time = SDL_GetTicks() - sound_time;
+
+            if (elapsed_time >= (1000/60))
+            {
+                ST--;
+                sound_time = SDL_GetTicks();
+            }
+        }
     }
 
     return 0;
@@ -396,8 +424,8 @@ void init_registers()
 {
     memset (V, 0, 16 * sizeof(uint8_t));
     I = 0;
-    delay_timer = 0;
-    sound_timer = 0;
+    DT = 0;
+    ST = 0;
 
     PC = InitialPC;
     SP = 0;
@@ -417,8 +445,8 @@ void dump_registers()
     }
 
     std::cout << "  I: " << (unsigned)I << std::endl;
-    std::cout << "  Delay Timer: " << (unsigned)delay_timer << std::endl;
-    std::cout << "  Sound Timer: " << (unsigned)sound_timer << std::endl;
+    std::cout << "  Delay Frames: " << (unsigned)DT << std::endl;
+    std::cout << "  Sound Frames: " << (unsigned)ST << std::endl;
 
     // Pseudo-Registers
     std::cout << "  PC: " << (unsigned)PC << std::endl;
