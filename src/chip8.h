@@ -11,6 +11,7 @@ struct Chip8
     static const uint16_t MEMORY_SIZE = 4096;
     static const uint16_t INITIAL_PC = 0x200;
     static const uint16_t MAX_ROM_SIZE = MEMORY_SIZE - INITIAL_PC;
+    static const uint16_t SPRITE_OFFSET = 0x50;
 
     static const uint8_t SCREEN_WIDTH = 64;
     static const uint8_t SCREEN_HEIGHT = 32;
@@ -22,7 +23,7 @@ private:
     void init_memory(const char *file_path);
     void process_input();
 
-    uint8_t memory[MEMORY_SIZE];
+    unsigned char memory[MEMORY_SIZE];
 
     // Registers
     uint8_t V[16];

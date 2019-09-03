@@ -19,6 +19,7 @@ Chip8::Chip8()
     srand (static_cast<unsigned int>(time(NULL)));
     SDL_Init(SDL_INIT_EVERYTHING);
     init_memory("roms/test_opcode.ch8");
+    init_registers();
 
     event_loop();
 }
@@ -32,7 +33,6 @@ void Chip8::event_loop()
 {
     // @Todo: check argc and argv for the path to the rom to load
     uint16_t opcode = 0;
-
 
     for(;;)
     {
@@ -476,7 +476,7 @@ void Chip8::init_memory(const char *file_path)
     memset (memory, 0, MEMORY_SIZE * sizeof(unsigned char));
     for (int i=0; i<80; ++i)
     {
-        memory[i] = fontset[i];
+        memory[SPRITE_OFFSET + i] = fontset[i];
     }
 
     std::ifstream is (file_path, std::ifstream::binary);
