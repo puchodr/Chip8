@@ -6,73 +6,33 @@
 
 #include <SDL2/SDL.h>
 
+#include "chip8.h"
+
 #include "opcodes.h"
 #include "input.h"
 
 #define Vx ((opcode & 0x0F00) >> 8)
 #define Vy ((opcode & 0x00F0) >> 4)
 
-const uint16_t MEMORY_SIZE = 4096;
-const uint16_t INITIAL_PC = 0x200;
-const uint16_t MAX_ROM_SIZE = MEMORY_SIZE - INITIAL_PC;
-
-uint8_t memory[MEMORY_SIZE];
-
-// Registers
-uint8_t V[16];
-uint16_t I;
-uint8_t DT;
-uint32_t delay_time;
-uint8_t ST;
-uint8_t sound_time;
-
-// Pseudo-Registers
-uint16_t PC;
-uint8_t SP;
-uint16_t stack[16];
-bool key[16]; // Pressed = true
-
-bool wait;
-bool draw_flag = false;
-
-Input input;
-SDL_Event event;
-
-unsigned char fontset[80] =
-{
-    0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
-    0x20, 0x60, 0x20, 0x20, 0x70, // 1
-    0xF0, 0x10, 0xF0, 0x80, 0xF0, // 2
-    0xF0, 0x10, 0xF0, 0x10, 0xF0, // 3
-    0x90, 0x90, 0xF0, 0x10, 0x10, // 4
-    0xF0, 0x80, 0xF0, 0x10, 0xF0, // 5
-    0xF0, 0x80, 0xF0, 0x90, 0xF0, // 6
-    0xF0, 0x10, 0x20, 0x40, 0x40, // 7
-    0xF0, 0x90, 0xF0, 0x90, 0xF0, // 8
-    0xF0, 0x90, 0xF0, 0x10, 0xF0, // 9
-    0xF0, 0x90, 0xF0, 0x90, 0x90, // A
-    0xE0, 0x90, 0xE0, 0x90, 0xE0, // B
-    0xF0, 0x80, 0x80, 0x80, 0xF0, // C
-    0xE0, 0x90, 0x90, 0x90, 0xE0, // D
-    0xF0, 0x80, 0xF0, 0x80, 0xF0, // E
-    0xF0, 0x80, 0xF0, 0x80, 0x80, // F
-};
-
-void init_registers();
-void dump_registers();
-void init_memory(const char *file_path);
-void process_input();
-
-int main (int argc, char **argv)
+Chip8::Chip8()
 {
     srand (static_cast<unsigned int>(time(NULL)));
     SDL_Init(SDL_INIT_EVERYTHING);
-
-    // @Todo: check argc and argv for the path to the rom to load
     init_memory("roms/test_opcode.ch8");
 
-    PC = INITIAL_PC;
+    event_loop();
+}
+
+Chip8::~Chip8()
+{
+    SDL_Quit();
+}
+
+void Chip8::event_loop()
+{
+    // @Todo: check argc and argv for the path to the rom to load
     uint16_t opcode = 0;
+
 
     for(;;)
     {
@@ -448,11 +408,9 @@ int main (int argc, char **argv)
             }
         }
     }
-
-    return 0;
 }
 
-void init_registers()
+void Chip8::init_registers()
 {
     memset (V, 0, 16 * sizeof(uint8_t));
     I = 0;
@@ -467,7 +425,7 @@ void init_registers()
     wait = false;
 }
 
-void dump_registers()
+void Chip8::dump_registers() const
 {
     std::cout << std::dec;
     std::cout << "  Vx:" << std::endl;
@@ -493,8 +451,28 @@ void dump_registers()
     std::cout << std::endl;
 }
 
-void init_memory(const char *file_path)
+void Chip8::init_memory(const char *file_path)
 {
+    unsigned char fontset[80] =
+    {
+        0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
+        0x20, 0x60, 0x20, 0x20, 0x70, // 1
+        0xF0, 0x10, 0xF0, 0x80, 0xF0, // 2
+        0xF0, 0x10, 0xF0, 0x10, 0xF0, // 3
+        0x90, 0x90, 0xF0, 0x10, 0x10, // 4
+        0xF0, 0x80, 0xF0, 0x10, 0xF0, // 5
+        0xF0, 0x80, 0xF0, 0x90, 0xF0, // 6
+        0xF0, 0x10, 0x20, 0x40, 0x40, // 7
+        0xF0, 0x90, 0xF0, 0x90, 0xF0, // 8
+        0xF0, 0x90, 0xF0, 0x10, 0xF0, // 9
+        0xF0, 0x90, 0xF0, 0x90, 0x90, // A
+        0xE0, 0x90, 0xE0, 0x90, 0xE0, // B
+        0xF0, 0x80, 0x80, 0x80, 0xF0, // C
+        0xE0, 0x90, 0x90, 0x90, 0xE0, // D
+        0xF0, 0x80, 0xF0, 0x80, 0xF0, // E
+        0xF0, 0x80, 0xF0, 0x80, 0x80, // F
+    };
+
     memset (memory, 0, MEMORY_SIZE * sizeof(unsigned char));
     for (int i=0; i<80; ++i)
     {
@@ -532,7 +510,7 @@ void init_memory(const char *file_path)
     }
 }
 
-void process_input()
+void Chip8::process_input()
 {
     input.beginNewFrame();
 

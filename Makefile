@@ -24,7 +24,7 @@ CFLAGS=-g -Wall -Wextra -std=c++11 -MMD `sdl2-config --cflags`
 # sdl2-config=a command that generates the load libs/cflags necessary depending
 # on the platform (OS/Linux/Win)
 #LDLIBS=`sdl2-config --libs` -lboost_system -lboost_filesystem
-LDLIBS=`sdl2-config --libs`
+LDLIBS=`sdl2-config --libs` -lSDL2_image
 
 # LDFLAGS (Load/linker flags)
 LDFLAGS=
