@@ -1,12 +1,18 @@
 #ifndef CHIP8_H_
 #define CHIP8_H_
 
+#include <memory>
+
 #include "input.h"
+
+struct Graphics;
 
 struct Chip8
 {
-    Chip8();
+    Chip8(Graphics& graphics);
     ~Chip8();
+
+    void event_loop();
 
     static const uint16_t MEMORY_SIZE = 4096;
     static const uint16_t INITIAL_PC = 0x200;
@@ -17,7 +23,6 @@ struct Chip8
     static const uint8_t SCREEN_HEIGHT = 32;
 
 private:
-    void event_loop();
     void init_registers();
     void dump_registers() const;
     void init_memory(const char *file_path);
@@ -44,6 +49,7 @@ private:
 
     Input input;
     SDL_Event event;
+    Graphics& graphics;
 };
 
 #endif // CHIP8_H_

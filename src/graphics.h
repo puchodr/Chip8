@@ -15,25 +15,25 @@ struct Graphics
     Graphics();
     ~Graphics();
 
-    SDL_Texture* loadImage(const std::string& file_name, bool black_is_transparent=false);
+    SDL_Texture* load_image(const std::string& file_name, bool black_is_transparent=false);
 
-    void renderTexture(SDL_Texture *texture,
+    void render_texture(SDL_Texture *texture,
          const SDL_Rect destination,
          const SDL_Rect *clip=nullptr) const;
-    void renderTexture(SDL_Texture *texture,
+    void render_texture(SDL_Texture *texture,
          int x, int y,
          const SDL_Rect *clip=nullptr) const;
 
     void clear() const;
     void flip() const;
-    void toggleFullscreen();
+    void toggle_fullscreen();
 
 private:
     typedef std::map<std::string, SDL_Texture*> SpriteMap;
-    SpriteMap sprite_sheets_;
-    SDL_Window *sdl_window_;
-    SDL_Renderer *sdl_renderer_;
-    bool fullscreen_;
+    SpriteMap sprite_sheets;
+    SDL_Window *sdl_window;
+    SDL_Renderer *sdl_renderer;
+    bool fullscreen;
 };
 
 #endif // GRAPHICS_H_

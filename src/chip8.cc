@@ -9,19 +9,18 @@
 #include "chip8.h"
 
 #include "opcodes.h"
+#include "graphics.h"
 #include "input.h"
 
 #define Vx ((opcode & 0x0F00) >> 8)
 #define Vy ((opcode & 0x00F0) >> 4)
 
-Chip8::Chip8()
+Chip8::Chip8(Graphics& graphics) :
+    graphics(graphics)
 {
     srand (static_cast<unsigned int>(time(NULL)));
-    SDL_Init(SDL_INIT_EVERYTHING);
     init_memory("roms/test_opcode.ch8");
     init_registers();
-
-    event_loop();
 }
 
 Chip8::~Chip8()
@@ -427,28 +426,18 @@ void Chip8::init_registers()
 
 void Chip8::dump_registers() const
 {
-    std::cout << std::dec;
-    std::cout << "  Vx:" << std::endl;
+    printf("Internal Data:\n");
+    printf("============================\n");
+    printf("PC = %X\tSP = %u\n", PC, SP);
+    printf("DT = %u\t\tST = %u\n", DT, ST);
+    printf("I  = %u\n", I);
+
     for (int i=0; i<16; ++i)
     {
-        std::cout << "    V" << (int)i << ": " << (unsigned)V[i] << std::endl;
+        printf("V[%X] = %u\tS[%X] = %u\n", i, V[i], i, stack[i]);
     }
 
-    std::cout << "  I: " << (unsigned)I << std::endl;
-    std::cout << "  Delay Frames: " << (unsigned)DT << std::endl;
-    std::cout << "  Sound Frames: " << (unsigned)ST << std::endl;
-
-    // Pseudo-Registers
-    std::cout << "  PC: " << (unsigned)PC << std::endl;
-    std::cout << "  SP: " << (unsigned)SP << std::endl;
-
-    std::cout << "  Stack:" << std::endl;
-    for (int i=0; i<16; ++i)
-    {
-        std::cout << "    S" << (int)i << ": " << (unsigned)stack[i] << std::endl;
-    }
-
-    std::cout << std::endl;
+    printf("============================\n\n");
 }
 
 void Chip8::init_memory(const char *file_path)

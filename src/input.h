@@ -15,9 +15,9 @@ struct Input {
 	bool isKeyHeld(SDL_Scancode key);
 
 	private:
-		std::map<SDL_Scancode, bool> held_keys_;
-		std::map<SDL_Scancode, bool> pressed_keys_;
-		std::map<SDL_Scancode, bool> released_keys_;
+		std::map<SDL_Scancode, bool> held_keys;
+		std::map<SDL_Scancode, bool> pressed_keys;
+		std::map<SDL_Scancode, bool> released_keys;
 };
 
 #endif // INPUT_H
