@@ -35,7 +35,6 @@ Chip8::~Chip8()
 
 void Chip8::event_loop()
 {
-    // @Todo: check argc and argv for the path to the rom to load
     uint16_t opcode = 0;
 
     for(;;)
@@ -61,7 +60,7 @@ void Chip8::event_loop()
                     case CLS:
                         dump_opcode(CLS, opcode);
 
-                        // @Todo: Clear the graphics screen
+                        graphics.clear();
                         dump_registers();
                         break;
 
@@ -362,7 +361,9 @@ void Chip8::event_loop()
                 break;
 
             default:
-                std::cout << "Don't know how to decode opcode: " << std::hex << std::hex << opcode << std::dec << std::endl;
+                // @Info: Passing MASK_0 just cuz. This should output the opcode so we could figure out if there's an issue with
+                //        the rom or an issue with the op decoding.
+                dump_opcode(MASK_0, opcode);
                 dump_registers();
                 break;
         }

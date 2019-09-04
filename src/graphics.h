@@ -12,10 +12,12 @@ struct SDL_Rect;
 
 struct Graphics
 {
-    Graphics();
+    Graphics(std::string title, int window_width, int window_height, int texture_width, int texture_height);
     ~Graphics();
 
     SDL_Texture* load_image(const std::string& file_name, bool black_is_transparent=false);
+
+    void update_window(void const* buffer, int pitch) const;
 
     void render_texture(SDL_Texture *texture,
          const SDL_Rect destination,
@@ -31,8 +33,9 @@ struct Graphics
 private:
     typedef std::map<std::string, SDL_Texture*> SpriteMap;
     SpriteMap sprite_sheets;
-    SDL_Window *sdl_window;
-    SDL_Renderer *sdl_renderer;
+    SDL_Window *window;
+    SDL_Renderer *renderer;
+    SDL_Texture *texture;
     bool fullscreen;
 };
 
