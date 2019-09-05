@@ -19,7 +19,7 @@ int main (int argc, char **argv)
             10 * Chip8::SCREEN_HEIGHT,
             Chip8::SCREEN_WIDTH,
             Chip8::SCREEN_HEIGHT);
-    Chip8 chip8("roms/test_opcode.ch8", graphics);
+    Chip8 chip8("roms/test_opcode.ch8", 8, graphics);
 
     chip8.event_loop();
 }

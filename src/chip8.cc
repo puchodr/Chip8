@@ -16,6 +16,7 @@
 
 Chip8::Chip8(
         std::string ROM,
+        int palette,
         Graphics& graphics) :
     ROM(ROM),
     wait(false),
@@ -23,44 +24,71 @@ Chip8::Chip8(
     quit(false),
     graphics(graphics)
 {
-    srand (static_cast<unsigned int>(time(NULL)));
-    init_memory(ROM.c_str());
-    init_registers();
-
-    int palette = 0;
     switch (palette)
     {
         case BLACK_WHITE:
             PIXEL_ON = 0xFFFFFFFF;
-            PIXEL_OFF = 0x0;
+            PIXEL_OFF = 0x00000000;
             break;
         case WHITE_BLACK:
+            PIXEL_ON = 0x00000000;
+            PIXEL_OFF = 0xFFFFFFFF;
             break;
         case YELLOW_BLUE:
+            PIXEL_ON  = 0xF4B41AFF;
+            PIXEL_OFF = 0x143D59FF;
             break;
         case BLUE_YELLOW:
+            PIXEL_ON = 0x143D59FF;
+            PIXEL_OFF = 0xF4B41AFF;
             break;
         case NAVY_TEAL:
+            PIXEL_ON = 0x210070FF;
+            PIXEL_OFF = 0x60CDCDFF;
             break;
         case TEAL_NAVY:
+            PIXEL_ON = 0x60CDCDFF;
+            PIXEL_OFF = 0x210070FF;
             break;
         case BLACK_ORANGE:
+            PIXEL_ON = 0x111111FF;
+            PIXEL_OFF = 0xFF6500FF;
             break;
         case ORANGE_BLACK:
+            PIXEL_ON = 0xFF6500FF;
+            PIXEL_OFF = 0x111111FF;
             break;
         case MAROON_PEACH:
+            PIXEL_ON = 0x5B0E2DFF;
+            PIXEL_OFF = 0xFFA781FF;
             break;
         case PEACH_MAROON:
+            PIXEL_ON = 0xFFA781FF;
+            PIXEL_OFF = 0x5B0E2DFF;
             break;
         case PURPLE_BLUE:
+            PIXEL_ON = 0x5E001FFF;
+            PIXEL_OFF = 0x00E1D9FF;
             break;
         case BLUE_PURPLE:
+            PIXEL_ON = 0x00E1D9FF;
+            PIXEL_OFF = 0x5E001FFF;
             break;
         case NAVY_ORANGE:
+            PIXEL_ON = 0x210070FF;
+            PIXEL_OFF = 0xF49F1CFF;
             break;
         case ORANGE_NAVY:
+            PIXEL_ON = 0xF49F1CFF;
+            PIXEL_OFF = 0x210070FF;
             break;
     }
+
+    clear_gfx();
+
+    srand (static_cast<unsigned int>(time(NULL)));
+    init_memory(ROM.c_str());
+    init_registers();
 }
 
 Chip8::~Chip8()
@@ -95,7 +123,7 @@ void Chip8::event_loop()
                     case CLS:
                         dump_opcode(CLS, opcode);
 
-                        memset(gfx_buffer, 0x0, sizeof(gfx_buffer[0]) * SCREEN_WIDTH * SCREEN_HEIGHT);
+                        clear_gfx();
                         draw_flag = true;
                         dump_registers();
                         break;
@@ -288,7 +316,7 @@ void Chip8::event_loop()
                         uint8_t sprite_pixel = sprite_row & (0x80 >> j);
                         int  gfx_x = (V[Vx] + j) % SCREEN_WIDTH;
                         int  gfx_y = ((V[Vy] + i) * SCREEN_WIDTH) % (SCREEN_WIDTH * SCREEN_HEIGHT);
-                        if (gfx_buffer[gfx_y + gfx_x] && sprite_pixel)
+                        if ((gfx_buffer[gfx_y + gfx_x] == PIXEL_ON) && sprite_pixel)
                         {
                             gfx_buffer[gfx_y + gfx_x] = PIXEL_OFF;
                             V[0xF] = 1;
@@ -457,6 +485,14 @@ void Chip8::event_loop()
     }
 }
 
+void Chip8::clear_gfx()
+{
+    for (int i = 0; i < SCREEN_WIDTH * SCREEN_HEIGHT; ++i)
+    {
+        gfx_buffer[i] = PIXEL_OFF;
+    }
+}
+
 void Chip8::init_registers()
 {
     memset (V, 0, 16 * sizeof(V[0]));
@@ -468,7 +504,6 @@ void Chip8::init_registers()
     SP = 0;
     memset (stack, 0, 16 * sizeof(stack[0]));
     memset (key, false, 16 * sizeof(key[0]));
-    memset(gfx_buffer, 0x0, sizeof(gfx_buffer[0]) * SCREEN_WIDTH * SCREEN_HEIGHT);
 
     wait = false;
 }
@@ -732,5 +767,6 @@ void Chip8::process_input()
     {
         init_memory(ROM.c_str());
         init_registers();
+        clear_gfx();
     }
 }

@@ -7,7 +7,7 @@ struct Graphics;
 
 struct Chip8
 {
-    Chip8(std::string ROM, Graphics& graphics);
+    Chip8(std::string ROM, int palette, Graphics& graphics);
     ~Chip8();
 
     void event_loop();
@@ -86,6 +86,7 @@ struct Chip8
 
     private:
     void dump_opcode(OpcodeType type, uint16_t opcode) const;
+    void clear_gfx();
     void init_registers();
     void dump_registers() const;
     void init_memory(const char *file_path);
