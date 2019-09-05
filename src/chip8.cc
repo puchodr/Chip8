@@ -14,7 +14,7 @@
 #define Vx ((opcode & 0x0F00) >> 8)
 #define Vy ((opcode & 0x00F0) >> 4)
 
-const unsigned int FPS = 0;
+const unsigned int FPS = 250;
 
 Chip8::Chip8(
         std::string ROM,
@@ -101,6 +101,8 @@ Chip8::~Chip8()
 void Chip8::event_loop()
 {
     uint16_t opcode = 0;
+
+    uint32_t draw_time = 0;
 
     for(;;)
     {
@@ -429,7 +431,7 @@ void Chip8::event_loop()
                     case LD_IV:
                         dump_opcode(LD_IV, opcode);
 
-                        for (int i=0; i<Vx; ++i)
+                        for (int i=0; i<=Vx; ++i)
                         {
                             memory[I+i] = V[i];
                         }
@@ -439,7 +441,7 @@ void Chip8::event_loop()
                     case LD_VI:
                         dump_opcode(LD_VI, opcode);
 
-                        for (int i=0; i<Vx; ++i)
+                        for (int i=0; i<=Vx; ++i)
                         {
                             V[i] = memory[I+i];
                         }
@@ -461,14 +463,17 @@ void Chip8::event_loop()
                 break;
         }
 
-        if (draw_flag)
+        uint32_t elapsed_time = SDL_GetTicks() - draw_time;
+        if (elapsed_time > (1000/60))
         {
+            draw_time = SDL_GetTicks();
             graphics.update_window(gfx_buffer, sizeof(gfx_buffer[0]) * SCREEN_WIDTH);
+            draw_flag = false;
         }
 
         if (DT)
         {
-            uint32_t elapsed_time = SDL_GetTicks() - delay_time;
+            elapsed_time = SDL_GetTicks() - delay_time;
             if (elapsed_time >= (1000/60))
             {
                 DT--;
@@ -478,7 +483,7 @@ void Chip8::event_loop()
 
         if (ST)
         {
-            uint32_t elapsed_time = SDL_GetTicks() - sound_time;
+            elapsed_time = SDL_GetTicks() - sound_time;
             if (elapsed_time >= (1000/60))
             {
                 ST--;
