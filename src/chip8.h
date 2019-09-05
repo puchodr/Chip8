@@ -66,6 +66,24 @@ struct Chip8
         LD_VI   = 0xF065,   // Read V0-Vx from memory starting at I
     };
 
+    enum ColorPalette
+    {
+        BLACK_WHITE = 0,
+        WHITE_BLACK,
+        YELLOW_BLUE,
+        BLUE_YELLOW,
+        NAVY_TEAL,
+        TEAL_NAVY,
+        BLACK_ORANGE,
+        ORANGE_BLACK,
+        MAROON_PEACH,
+        PEACH_MAROON,
+        PURPLE_BLUE,
+        BLUE_PURPLE,
+        NAVY_ORANGE,
+        ORANGE_NAVY,
+    };
+
     private:
     void dump_opcode(OpcodeType type, uint16_t opcode) const;
     void init_registers();
@@ -88,11 +106,15 @@ struct Chip8
     uint8_t SP;
     uint16_t stack[16];
     bool key[16]; // Pressed = true
+    uint32_t gfx_buffer[SCREEN_WIDTH * SCREEN_HEIGHT];
 
     std::string ROM;
     bool wait;
     bool draw_flag;
     bool quit;
+
+    uint32_t PIXEL_ON;
+    uint32_t PIXEL_OFF;
 
     Input input;
     SDL_Event event;

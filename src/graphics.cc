@@ -27,7 +27,7 @@ Graphics::Graphics(std::string title, int window_width, int window_height, int t
             texture_height);
 
     // @Todo: Figure out if we need these. If so, we may need to also use
-    // SDL_RenderSetIntegerScale(renderer, true);
+    SDL_RenderSetIntegerScale(renderer, SDL_bool(true));
     SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
     SDL_RenderSetLogicalSize(renderer,
             Chip8::SCREEN_WIDTH,

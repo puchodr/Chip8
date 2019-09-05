@@ -26,6 +26,41 @@ Chip8::Chip8(
     srand (static_cast<unsigned int>(time(NULL)));
     init_memory(ROM.c_str());
     init_registers();
+
+    int palette = 0;
+    switch (palette)
+    {
+        case BLACK_WHITE:
+            PIXEL_ON = 0xFFFFFFFF;
+            PIXEL_OFF = 0x0;
+            break;
+        case WHITE_BLACK:
+            break;
+        case YELLOW_BLUE:
+            break;
+        case BLUE_YELLOW:
+            break;
+        case NAVY_TEAL:
+            break;
+        case TEAL_NAVY:
+            break;
+        case BLACK_ORANGE:
+            break;
+        case ORANGE_BLACK:
+            break;
+        case MAROON_PEACH:
+            break;
+        case PEACH_MAROON:
+            break;
+        case PURPLE_BLUE:
+            break;
+        case BLUE_PURPLE:
+            break;
+        case NAVY_ORANGE:
+            break;
+        case ORANGE_NAVY:
+            break;
+    }
 }
 
 Chip8::~Chip8()
@@ -60,7 +95,8 @@ void Chip8::event_loop()
                     case CLS:
                         dump_opcode(CLS, opcode);
 
-                        graphics.clear();
+                        memset(gfx_buffer, 0x0, sizeof(gfx_buffer[0]) * SCREEN_WIDTH * SCREEN_HEIGHT);
+                        draw_flag = true;
                         dump_registers();
                         break;
 
@@ -68,6 +104,12 @@ void Chip8::event_loop()
                         dump_opcode(RET, opcode);
                         PC = stack[--SP];
                         stack[SP] = 0;
+                        dump_registers();
+                        break;
+
+                    case EXIT:
+                        dump_opcode(EXIT, opcode);
+                        quit = true;
                         dump_registers();
                         break;
 
@@ -238,7 +280,27 @@ void Chip8::event_loop()
             case DRW_XY:
                 dump_opcode(DRW_XY, opcode);
 
-                // @Todo: Figure out drawing to the screen.
+                for (int i = 0; i < (opcode & 0x000F); ++i)
+                {
+                    uint8_t sprite_row = memory[I+i];
+                    for (int j = 0; j < 8; ++j)
+                    {
+                        uint8_t sprite_pixel = sprite_row & (0x80 >> j);
+                        int  gfx_x = (V[Vx] + j) % SCREEN_WIDTH;
+                        int  gfx_y = ((V[Vy] + i) * SCREEN_WIDTH) % (SCREEN_WIDTH * SCREEN_HEIGHT);
+                        if (gfx_buffer[gfx_y + gfx_x] && sprite_pixel)
+                        {
+                            gfx_buffer[gfx_y + gfx_x] = PIXEL_OFF;
+                            V[0xF] = 1;
+                        }
+                        else
+                        {
+                            gfx_buffer[gfx_y + gfx_x] = sprite_pixel ? PIXEL_ON : PIXEL_OFF;
+                        }
+                    }
+                }
+
+                draw_flag = true;
                 dump_registers();
                 break;
 
@@ -370,7 +432,7 @@ void Chip8::event_loop()
 
         if (draw_flag)
         {
-            //@Todo: implement SDL draw logic here
+            graphics.update_window(gfx_buffer, sizeof(gfx_buffer[0]) * SCREEN_WIDTH);
         }
 
         if (DT)
@@ -397,15 +459,16 @@ void Chip8::event_loop()
 
 void Chip8::init_registers()
 {
-    memset (V, 0, 16 * sizeof(uint8_t));
+    memset (V, 0, 16 * sizeof(V[0]));
     I = 0;
     DT = 0;
     ST = 0;
 
     PC = INITIAL_PC;
     SP = 0;
-    memset (stack, 0, 16 * sizeof(uint16_t));
-    memset (key, false, 16 * sizeof(bool));
+    memset (stack, 0, 16 * sizeof(stack[0]));
+    memset (key, false, 16 * sizeof(key[0]));
+    memset(gfx_buffer, 0x0, sizeof(gfx_buffer[0]) * SCREEN_WIDTH * SCREEN_HEIGHT);
 
     wait = false;
 }
@@ -423,6 +486,9 @@ void Chip8::dump_opcode(OpcodeType type, uint16_t opcode) const
             break;
         case RET:
             printf("RET\n");
+            break;
+        case EXIT:
+            printf("EXIT\n");
             break;
         case JP:
             printf("JP %0*X\n", 4, (opcode & 0x0FFF));
