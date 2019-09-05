@@ -14,6 +14,8 @@
 #define Vx ((opcode & 0x0F00) >> 8)
 #define Vy ((opcode & 0x00F0) >> 4)
 
+const unsigned int FPS = 0;
+
 Chip8::Chip8(
         std::string ROM,
         int palette,
@@ -102,6 +104,7 @@ void Chip8::event_loop()
 
     for(;;)
     {
+        const unsigned int start_time = SDL_GetTicks();
         process_input();
 
         if (quit)
@@ -482,6 +485,17 @@ void Chip8::event_loop()
                 sound_time = SDL_GetTicks();
             }
         }
+
+        if (FPS != 0)
+        {
+            const unsigned int ms_per_frame = 1000 / FPS;
+            const unsigned int elapsed_time = SDL_GetTicks() - start_time;
+
+            // This delays the game to maintain 60 FPS.
+            if (elapsed_time < ms_per_frame) {
+                SDL_Delay(ms_per_frame - elapsed_time);
+            }
+        }
     }
 }
 
@@ -698,6 +712,11 @@ void Chip8::init_memory(const char *file_path)
         }
 
         is.close();
+    }
+    else
+    {
+        std::cerr << "Can't find file " << file_path << std::endl;
+        std::exit(EXIT_FAILURE);
     }
 }
 
