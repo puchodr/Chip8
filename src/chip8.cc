@@ -322,14 +322,19 @@ void Chip8::event_loop()
                         uint8_t sprite_pixel = sprite_row & (0x80 >> j);
                         int  gfx_x = (V[Vx] + j) % SCREEN_WIDTH;
                         int  gfx_y = ((V[Vy] + i) * SCREEN_WIDTH) % (SCREEN_WIDTH * SCREEN_HEIGHT);
-                        if ((gfx_buffer[gfx_y + gfx_x] == PIXEL_ON) && sprite_pixel)
+                        uint32_t *gfx_pixel = &gfx_buffer[gfx_y + gfx_x];
+
+                        if (sprite_pixel)
                         {
-                            gfx_buffer[gfx_y + gfx_x] = PIXEL_OFF;
-                            V[0xF] = 1;
-                        }
-                        else
-                        {
-                            gfx_buffer[gfx_y + gfx_x] = sprite_pixel ? PIXEL_ON : PIXEL_OFF;
+                            if (*gfx_pixel == PIXEL_ON)
+                            {
+                                *gfx_pixel = PIXEL_OFF;
+                                V[0xF] = 1;
+                            }
+                            else
+                            {
+                                *gfx_pixel = PIXEL_ON;
+                            }
                         }
                     }
                 }
