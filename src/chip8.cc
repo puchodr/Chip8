@@ -313,6 +313,7 @@ void Chip8::event_loop()
             case DRW_XY:
                 dump_opcode(DRW_XY, opcode);
 
+                V[0xF] = 0;
                 for (int i = 0; i < (opcode & 0x000F); ++i)
                 {
                     uint8_t sprite_row = memory[I+i];
@@ -343,14 +344,14 @@ void Chip8::event_loop()
                     case SKP_X:
                         dump_opcode(SKP_X, opcode);
 
-                        PC += key[Vx] ? 2 : 0;
+                        PC += key[V[Vx]] ? 2 : 0;
                         dump_registers();
                         break;
 
                     case SKNP_X:
                         dump_opcode(SKNP_X, opcode);
 
-                        PC += key[Vx] ? 0 : 2;
+                        PC += key[V[Vx]] ? 0 : 2;
                         dump_registers();
                         break;
 
@@ -415,7 +416,7 @@ void Chip8::event_loop()
                         dump_opcode(LD_FX, opcode);
 
                         // @Info: Each character takesup 5 bytes.
-                        I = memory[SPRITE_OFFSET + (V[Vx] * 5)];
+                        I = SPRITE_OFFSET + (V[Vx] * 5);
                         dump_registers();
                         break;
 
@@ -656,7 +657,7 @@ void Chip8::dump_registers() const
 
     for (int i=0; i<16; ++i)
     {
-        printf("V[%X] = %u\tS[%X] = %u\n", i, V[i], i, stack[i]);
+        printf("V[%X] = %u\tS[%X] = %u\tKey[%X] = %u\n", i, V[i], i, stack[i], i, key[i]);
     }
     printf("\n");
 }
@@ -762,25 +763,25 @@ void Chip8::process_input()
      * +-+-+-+-+    +-+-+-+-+
      */
 
-    key[0x1] = input.wasKeyPressed(SDL_SCANCODE_1);
-    key[0x2] = input.wasKeyPressed(SDL_SCANCODE_2);
-    key[0x3] = input.wasKeyPressed(SDL_SCANCODE_3);
-    key[0xC] = input.wasKeyPressed(SDL_SCANCODE_4);
+    key[0x1] = input.isKeyHeld(SDL_SCANCODE_1);
+    key[0x2] = input.isKeyHeld(SDL_SCANCODE_2);
+    key[0x3] = input.isKeyHeld(SDL_SCANCODE_3);
+    key[0xC] = input.isKeyHeld(SDL_SCANCODE_4);
 
-    key[0x4] = input.wasKeyPressed(SDL_SCANCODE_Q);
-    key[0x5] = input.wasKeyPressed(SDL_SCANCODE_W);
-    key[0x6] = input.wasKeyPressed(SDL_SCANCODE_E);
-    key[0xD] = input.wasKeyPressed(SDL_SCANCODE_R);
+    key[0x4] = input.isKeyHeld(SDL_SCANCODE_Q);
+    key[0x5] = input.isKeyHeld(SDL_SCANCODE_W);
+    key[0x6] = input.isKeyHeld(SDL_SCANCODE_E);
+    key[0xD] = input.isKeyHeld(SDL_SCANCODE_R);
 
-    key[0x7] = input.wasKeyPressed(SDL_SCANCODE_A);
-    key[0x8] = input.wasKeyPressed(SDL_SCANCODE_S);
-    key[0x9] = input.wasKeyPressed(SDL_SCANCODE_D);
-    key[0xE] = input.wasKeyPressed(SDL_SCANCODE_F);
+    key[0x7] = input.isKeyHeld(SDL_SCANCODE_A);
+    key[0x8] = input.isKeyHeld(SDL_SCANCODE_S);
+    key[0x9] = input.isKeyHeld(SDL_SCANCODE_D);
+    key[0xE] = input.isKeyHeld(SDL_SCANCODE_F);
 
-    key[0xA] = input.wasKeyPressed(SDL_SCANCODE_Z);
-    key[0x0] = input.wasKeyPressed(SDL_SCANCODE_X);
-    key[0xB] = input.wasKeyPressed(SDL_SCANCODE_C);
-    key[0xF] = input.wasKeyPressed(SDL_SCANCODE_V);
+    key[0xA] = input.isKeyHeld(SDL_SCANCODE_Z);
+    key[0x0] = input.isKeyHeld(SDL_SCANCODE_X);
+    key[0xB] = input.isKeyHeld(SDL_SCANCODE_C);
+    key[0xF] = input.isKeyHeld(SDL_SCANCODE_V);
 
     if (input.wasKeyPressed(SDL_SCANCODE_BACKSPACE))
     {
