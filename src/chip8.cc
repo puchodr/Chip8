@@ -15,6 +15,12 @@
 #define Vy ((opcode & 0x00F0) >> 4)
 
 const unsigned int FPS = 250;
+uint8_t *buzzer;
+uint8_t *audio_pos;
+int audio_len;
+SDL_AudioSpec buzzer_spec;
+
+void fill_audio(void* /*userdata*/, uint8_t* stream, int len);
 
 Chip8::Chip8(
         std::string ROM,
@@ -91,10 +97,12 @@ Chip8::Chip8(
     srand (static_cast<unsigned int>(time(NULL)));
     init_memory(ROM.c_str());
     init_registers();
+    init_audio();
 }
 
 Chip8::~Chip8()
 {
+    SDL_FreeWAV(buzzer);
     SDL_Quit();
 }
 
@@ -326,6 +334,7 @@ void Chip8::event_loop()
 
                         if (sprite_pixel)
                         {
+                            // Effectively an XOR. Can't exactly use an XOR because of the different color palettes
                             if (*gfx_pixel == PIXEL_ON)
                             {
                                 *gfx_pixel = PIXEL_OFF;
@@ -489,10 +498,19 @@ void Chip8::event_loop()
 
         if (ST)
         {
+            if (SDL_GetAudioDeviceStatus(audio_device) != SDL_AUDIO_PLAYING)
+            {
+                start_audio();
+            }
+
             elapsed_time = SDL_GetTicks() - sound_time;
             if (elapsed_time >= (1000/60))
             {
                 ST--;
+                if (ST == 0)
+                {
+                    stop_audio();
+                }
                 sound_time = SDL_GetTicks();
             }
         }
@@ -531,6 +549,208 @@ void Chip8::init_registers()
     memset (key, false, 16 * sizeof(key[0]));
 
     wait = false;
+}
+
+void Chip8::dump_registers() const
+{
+    printf("Internal Data:\n");
+    printf("============================\n");
+    printf("PC = %X\tSP = %u\n", PC, SP);
+    printf("DT = %u\t\tST = %u\n", DT, ST);
+    printf("I  = %u\n", I);
+
+    for (int i=0; i<16; ++i)
+    {
+        printf("V[%X] = %u\tS[%X] = %u\tKey[%X] = %u\n", i, V[i], i, stack[i], i, key[i]);
+    }
+    printf("\n");
+}
+
+void Chip8::init_memory(const char *file_path)
+{
+    unsigned char fontset[80] =
+    {
+        0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
+        0x20, 0x60, 0x20, 0x20, 0x70, // 1
+        0xF0, 0x10, 0xF0, 0x80, 0xF0, // 2
+        0xF0, 0x10, 0xF0, 0x10, 0xF0, // 3
+        0x90, 0x90, 0xF0, 0x10, 0x10, // 4
+        0xF0, 0x80, 0xF0, 0x10, 0xF0, // 5
+        0xF0, 0x80, 0xF0, 0x90, 0xF0, // 6
+        0xF0, 0x10, 0x20, 0x40, 0x40, // 7
+        0xF0, 0x90, 0xF0, 0x90, 0xF0, // 8
+        0xF0, 0x90, 0xF0, 0x10, 0xF0, // 9
+        0xF0, 0x90, 0xF0, 0x90, 0x90, // A
+        0xE0, 0x90, 0xE0, 0x90, 0xE0, // B
+        0xF0, 0x80, 0x80, 0x80, 0xF0, // C
+        0xE0, 0x90, 0x90, 0x90, 0xE0, // D
+        0xF0, 0x80, 0xF0, 0x80, 0xF0, // E
+        0xF0, 0x80, 0xF0, 0x80, 0x80, // F
+    };
+
+    memset (memory, 0, MEMORY_SIZE * sizeof(unsigned char));
+    for (int i=0; i<80; ++i)
+    {
+        memory[SPRITE_OFFSET + i] = fontset[i];
+    }
+
+    std::ifstream is (file_path, std::ifstream::binary);
+
+    if (is)
+    {
+        is.seekg (0, is.end);
+        int length = is.tellg();
+        std::cout << "File Length: " << length << std::endl;
+        is.seekg (0, is.beg);
+
+        if (length > (MAX_ROM_SIZE))
+        {
+            std::cerr << "Error: this rom is too big for a Chip8 ROM." << std::endl;
+            quit = true;
+        }
+
+        is.read((char*)(&memory[INITIAL_PC]), length);
+
+        if (is)
+        {
+            std::cout << "File was read successfully!" << std::endl;
+        }
+        else
+        {
+            std::cerr << "Error: only " << is.gcount() << " bytes out of " << length << " could be read." << std::endl;
+            quit = true;
+        }
+
+        is.close();
+    }
+    else
+    {
+        std::cerr << "Can't find file " << file_path << std::endl;
+        quit = true;
+    }
+}
+
+void Chip8::init_audio()
+{
+    uint32_t buzzer_length;
+    const char file[] = "audio/buzzer.wav";
+
+    if (SDL_LoadWAV("audio/buzzer.wav", &buzzer_spec, &buzzer, &buzzer_length) == NULL)
+    {
+        std::cerr << "Unable to load wav file " << file << std::endl;
+        quit = true;
+    }
+
+    buzzer_spec.callback = fill_audio;
+    buzzer_spec.userdata = NULL;
+
+    audio_pos = buzzer;
+    audio_len = buzzer_length;
+}
+
+void Chip8::start_audio()
+{
+    SDL_zero(buzzer_spec);
+    buzzer_spec.channels = 2;
+    buzzer_spec.freq = 22050;
+    buzzer_spec.format = AUDIO_S16SYS;
+    buzzer_spec.userdata = NULL;
+    buzzer_spec.callback = fill_audio;
+    audio_device = SDL_OpenAudioDevice(NULL, 0, &buzzer_spec, &buzzer_spec, 0);
+
+    if (audio_device == 0)
+    {
+        std::cerr << "Couldn't open audio device: " << SDL_GetError() << std::endl;
+        quit = true;
+    }
+
+    SDL_PauseAudioDevice(audio_device, 0);
+}
+
+void Chip8::stop_audio()
+{
+    SDL_CloseAudioDevice(audio_device);
+}
+
+void fill_audio(void* /*userdata*/, uint8_t* stream, int len)
+{
+    if (audio_len == 0)
+        return;
+
+    len = (len > audio_len ? audio_len : len);
+    SDL_MixAudio(stream, audio_pos, len, SDL_MIX_MAXVOLUME);
+    audio_pos += len;
+    audio_len -= len;
+}
+
+void Chip8::process_input()
+{
+    input.beginNewFrame();
+
+    // This gets all the SDL_Events and checks for key presses, then stores
+    // those key presses in a map to be checked later.
+    while (SDL_PollEvent(&event))
+    {
+        switch (event.type)
+        {
+            case SDL_KEYDOWN:
+                input.keyDownEvent(event);
+                break;
+            case SDL_KEYUP:
+                input.keyUpEvent(event);
+                break;
+            case SDL_QUIT:
+                quit = true;
+                break;
+            default:
+                break;
+        }
+    }
+
+    /*
+     * Keypad       Keyboard
+     * +-+-+-+-+    +-+-+-+-+
+     * |1|2|3|C|    |1|2|3|4|
+     * +-+-+-+-+    +-+-+-+-+
+     * |4|5|6|D|    |Q|W|E|R|
+     * +-+-+-+-+ => +-+-+-+-+
+     * |7|8|9|E|    |A|S|D|F|
+     * +-+-+-+-+    +-+-+-+-+
+     * |A|0|B|F|    |Z|X|C|V|
+     * +-+-+-+-+    +-+-+-+-+
+     */
+
+    key[0x1] = input.isKeyHeld(SDL_SCANCODE_1);
+    key[0x2] = input.isKeyHeld(SDL_SCANCODE_2);
+    key[0x3] = input.isKeyHeld(SDL_SCANCODE_3);
+    key[0xC] = input.isKeyHeld(SDL_SCANCODE_4);
+
+    key[0x4] = input.isKeyHeld(SDL_SCANCODE_Q);
+    key[0x5] = input.isKeyHeld(SDL_SCANCODE_W);
+    key[0x6] = input.isKeyHeld(SDL_SCANCODE_E);
+    key[0xD] = input.isKeyHeld(SDL_SCANCODE_R);
+
+    key[0x7] = input.isKeyHeld(SDL_SCANCODE_A);
+    key[0x8] = input.isKeyHeld(SDL_SCANCODE_S);
+    key[0x9] = input.isKeyHeld(SDL_SCANCODE_D);
+    key[0xE] = input.isKeyHeld(SDL_SCANCODE_F);
+
+    key[0xA] = input.isKeyHeld(SDL_SCANCODE_Z);
+    key[0x0] = input.isKeyHeld(SDL_SCANCODE_X);
+    key[0xB] = input.isKeyHeld(SDL_SCANCODE_C);
+    key[0xF] = input.isKeyHeld(SDL_SCANCODE_V);
+
+    if (input.wasKeyPressed(SDL_SCANCODE_BACKSPACE))
+    {
+        quit = true;
+    }
+
+    if (input.wasKeyPressed(SDL_SCANCODE_RETURN))
+    {
+        init_memory(ROM.c_str());
+        init_registers();
+        clear_gfx();
+    }
 }
 
 void Chip8::dump_opcode(OpcodeType type, uint16_t opcode) const
@@ -649,154 +869,5 @@ void Chip8::dump_opcode(OpcodeType type, uint16_t opcode) const
         default:
             printf("Failed to decode Opcode: %0*X\n", 4, opcode);
             break;
-    }
-}
-
-void Chip8::dump_registers() const
-{
-    printf("Internal Data:\n");
-    printf("============================\n");
-    printf("PC = %X\tSP = %u\n", PC, SP);
-    printf("DT = %u\t\tST = %u\n", DT, ST);
-    printf("I  = %u\n", I);
-
-    for (int i=0; i<16; ++i)
-    {
-        printf("V[%X] = %u\tS[%X] = %u\tKey[%X] = %u\n", i, V[i], i, stack[i], i, key[i]);
-    }
-    printf("\n");
-}
-
-void Chip8::init_memory(const char *file_path)
-{
-    unsigned char fontset[80] =
-    {
-        0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
-        0x20, 0x60, 0x20, 0x20, 0x70, // 1
-        0xF0, 0x10, 0xF0, 0x80, 0xF0, // 2
-        0xF0, 0x10, 0xF0, 0x10, 0xF0, // 3
-        0x90, 0x90, 0xF0, 0x10, 0x10, // 4
-        0xF0, 0x80, 0xF0, 0x10, 0xF0, // 5
-        0xF0, 0x80, 0xF0, 0x90, 0xF0, // 6
-        0xF0, 0x10, 0x20, 0x40, 0x40, // 7
-        0xF0, 0x90, 0xF0, 0x90, 0xF0, // 8
-        0xF0, 0x90, 0xF0, 0x10, 0xF0, // 9
-        0xF0, 0x90, 0xF0, 0x90, 0x90, // A
-        0xE0, 0x90, 0xE0, 0x90, 0xE0, // B
-        0xF0, 0x80, 0x80, 0x80, 0xF0, // C
-        0xE0, 0x90, 0x90, 0x90, 0xE0, // D
-        0xF0, 0x80, 0xF0, 0x80, 0xF0, // E
-        0xF0, 0x80, 0xF0, 0x80, 0x80, // F
-    };
-
-    memset (memory, 0, MEMORY_SIZE * sizeof(unsigned char));
-    for (int i=0; i<80; ++i)
-    {
-        memory[SPRITE_OFFSET + i] = fontset[i];
-    }
-
-    std::ifstream is (file_path, std::ifstream::binary);
-
-    if (is)
-    {
-        is.seekg (0, is.end);
-        int length = is.tellg();
-        std::cout << "File Length: " << length << std::endl;
-        is.seekg (0, is.beg);
-
-        if (length > (MAX_ROM_SIZE))
-        {
-            std::cout << "Error: this rom is too big for Chip8 ROM." << std::endl;
-            quit = true;
-        }
-
-        is.read((char*)(&memory[INITIAL_PC]), length);
-
-        if (is)
-        {
-            std::cout << "File was read successfully!" << std::endl;
-        }
-        else
-        {
-            std::cout << "Error: only " << is.gcount() << " bytes could be read." << std::endl;
-            quit = true;
-        }
-
-        is.close();
-    }
-    else
-    {
-        std::cerr << "Can't find file " << file_path << std::endl;
-        std::exit(EXIT_FAILURE);
-    }
-}
-
-void Chip8::process_input()
-{
-    input.beginNewFrame();
-
-    // This gets all the SDL_Events and checks for key presses, then stores
-    // those key presses in a map to be checked later.
-    while (SDL_PollEvent(&event))
-    {
-        switch (event.type)
-        {
-            case SDL_KEYDOWN:
-                input.keyDownEvent(event);
-                break;
-            case SDL_KEYUP:
-                input.keyUpEvent(event);
-                break;
-            case SDL_QUIT:
-                quit = true;
-                break;
-            default:
-                break;
-        }
-    }
-
-    /*
-     * Keypad       Keyboard
-     * +-+-+-+-+    +-+-+-+-+
-     * |1|2|3|C|    |1|2|3|4|
-     * +-+-+-+-+    +-+-+-+-+
-     * |4|5|6|D|    |Q|W|E|R|
-     * +-+-+-+-+ => +-+-+-+-+
-     * |7|8|9|E|    |A|S|D|F|
-     * +-+-+-+-+    +-+-+-+-+
-     * |A|0|B|F|    |Z|X|C|V|
-     * +-+-+-+-+    +-+-+-+-+
-     */
-
-    key[0x1] = input.isKeyHeld(SDL_SCANCODE_1);
-    key[0x2] = input.isKeyHeld(SDL_SCANCODE_2);
-    key[0x3] = input.isKeyHeld(SDL_SCANCODE_3);
-    key[0xC] = input.isKeyHeld(SDL_SCANCODE_4);
-
-    key[0x4] = input.isKeyHeld(SDL_SCANCODE_Q);
-    key[0x5] = input.isKeyHeld(SDL_SCANCODE_W);
-    key[0x6] = input.isKeyHeld(SDL_SCANCODE_E);
-    key[0xD] = input.isKeyHeld(SDL_SCANCODE_R);
-
-    key[0x7] = input.isKeyHeld(SDL_SCANCODE_A);
-    key[0x8] = input.isKeyHeld(SDL_SCANCODE_S);
-    key[0x9] = input.isKeyHeld(SDL_SCANCODE_D);
-    key[0xE] = input.isKeyHeld(SDL_SCANCODE_F);
-
-    key[0xA] = input.isKeyHeld(SDL_SCANCODE_Z);
-    key[0x0] = input.isKeyHeld(SDL_SCANCODE_X);
-    key[0xB] = input.isKeyHeld(SDL_SCANCODE_C);
-    key[0xF] = input.isKeyHeld(SDL_SCANCODE_V);
-
-    if (input.wasKeyPressed(SDL_SCANCODE_BACKSPACE))
-    {
-        quit = true;
-    }
-
-    if (input.wasKeyPressed(SDL_SCANCODE_RETURN))
-    {
-        init_memory(ROM.c_str());
-        init_registers();
-        clear_gfx();
     }
 }

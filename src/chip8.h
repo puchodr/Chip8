@@ -85,12 +85,19 @@ struct Chip8
     };
 
     private:
-    void dump_opcode(OpcodeType type, uint16_t opcode) const;
     void clear_gfx();
+
     void init_registers();
     void dump_registers() const;
+
     void init_memory(const char *file_path);
+
+    void init_audio();
+    void start_audio();
+    void stop_audio();
+
     void process_input();
+    void dump_opcode(OpcodeType type, uint16_t opcode) const;
 
     uint8_t memory[MEMORY_SIZE];
 
@@ -120,6 +127,7 @@ struct Chip8
     Input input;
     SDL_Event event;
     Graphics& graphics;
+    SDL_AudioDeviceID audio_device;
 };
 
 #endif // CHIP8_H_
